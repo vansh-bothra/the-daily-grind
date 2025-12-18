@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee } from 'lucide-react';
+import { Coffee, Info, X } from 'lucide-react';
 
 // Types
 import { Position, EmployeePosition, Tile, Employee, LevelConfig, TileTypeConfig, EmployeeTypeConfig } from '@/types/game.types';
@@ -59,6 +59,9 @@ export default function Home() {
     
     // CEO state
     const [ceoMood, setCeoMood] = useState<'happy' | 'neutral' | 'frustrated'>('neutral');
+    
+    // Info modal state
+    const [showInfoModal, setShowInfoModal] = useState(false);
 
     // Initialize game with current level
     const initGame = useCallback(() => {
@@ -241,7 +244,16 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-            <div className="max-w-4xl w-full">
+            <div className="max-w-4xl w-full relative">
+                {/* Info Icon - Top Right */}
+                <button
+                    onClick={() => setShowInfoModal(true)}
+                    className="absolute top-0 right-0 p-2 rounded-full bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-colors z-10"
+                    aria-label="How to Play"
+                >
+                    <Info className="w-6 h-6" />
+                </button>
+
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-5xl font-bold text-white mb-2 flex items-center justify-center gap-3">
@@ -395,6 +407,85 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
+
+                {/* Info Modal */}
+                <AnimatePresence>
+                    {showInfoModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+                            onClick={() => setShowInfoModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+                            >
+                                <div className="flex justify-between items-start mb-6">
+                                    <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                                        <Info className="w-8 h-8 text-amber-500" />
+                                        How to Play
+                                    </h2>
+                                    <button
+                                        onClick={() => setShowInfoModal(false)}
+                                        className="p-2 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                                        aria-label="Close"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-6 text-slate-300">
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-white mb-2">🎮 Game Overview</h3>
+                                        <p className="text-slate-300">
+                                            Slide tiles in a 4×4 grid to position the coffee tile and deliver coffee to sleeping employees before time runs out!
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-white mb-2">📋 Instructions</h3>
+                                        <ol className="list-decimal list-inside space-y-2 ml-2">
+                                            <li>Click <strong>Start Game</strong> to begin</li>
+                                            <li><strong>Slide tiles</strong> by clicking on tiles adjacent to the empty space</li>
+                                            <li><strong>Find the sleeper</strong>: Look for the employee with a red background and 😴 emoji</li>
+                                            <li><strong>Position the coffee</strong>: Move the orange coffee tile (tile #15) to the grid cell next to the sleeping employee</li>
+                                            <li><strong>Deliver</strong>: When positioned correctly, green arrow(s) will appear - click to deliver!</li>
+                                            <li><strong>Score points</strong>: Each delivery = +1 point</li>
+                                            <li><strong>Beat the clock</strong>: You have 60 seconds to score as many points as possible</li>
+                                        </ol>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-white mb-2">🏆 Winning Condition</h3>
+                                        <p className="text-slate-300">
+                                            Solve the puzzle by arranging tiles 1-15 in order AND keep the CEO neutral or happy to win +15 bonus points!
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-white mb-2">👔 CEO Mood</h3>
+                                        <ul className="list-disc list-inside space-y-1 ml-2">
+                                            <li><span className="text-green-500">😊 Happy</span>: Score ≥ 10 points</li>
+                                            <li><span className="text-blue-500">😐 Neutral</span>: Default state</li>
+                                            <li><span className="text-red-500">😠 Frustrated</span>: Time ≤ 10s AND score &lt; 5</li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-slate-700">
+                                        <p className="text-sm text-slate-400">
+                                            <strong>Tip:</strong> The faster you deliver coffee, the happier the CEO will be! 🎯
+                                        </p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Game Over Modal */}
                 <AnimatePresence>
