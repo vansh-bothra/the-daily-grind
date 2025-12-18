@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Info, X } from 'lucide-react';
+import { Coffee, Info, X, Sun, Moon } from 'lucide-react';
 
 // Types
 import { Position, EmployeePosition, Tile, Employee, LevelConfig, TileTypeConfig, EmployeeTypeConfig } from '@/types/game.types';
@@ -62,6 +62,9 @@ export default function Home() {
     
     // Info modal state
     const [showInfoModal, setShowInfoModal] = useState(false);
+    
+    // Theme state
+    const [isDarkMode, setIsDarkMode] = useState(true);
 
     // Initialize game with current level
     const initGame = useCallback(() => {
@@ -243,12 +246,33 @@ export default function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className={`min-h-screen flex items-center justify-center p-4 transition-colors ${
+            isDarkMode 
+                ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+                : 'bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100'
+        }`}>
             <div className="max-w-4xl w-full relative">
+                {/* Theme Toggle - Top Left */}
+                <button
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    className={`absolute top-0 left-0 p-2 rounded-full transition-colors z-10 ${
+                        isDarkMode
+                            ? 'bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white'
+                            : 'bg-slate-200/50 hover:bg-slate-300/50 text-slate-700 hover:text-slate-900'
+                    }`}
+                    aria-label="Toggle Theme"
+                >
+                    {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+                </button>
+
                 {/* Info Icon - Top Right */}
                 <button
                     onClick={() => setShowInfoModal(true)}
-                    className="absolute top-0 right-0 p-2 rounded-full bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-colors z-10"
+                    className={`absolute top-0 right-0 p-2 rounded-full transition-colors z-10 ${
+                        isDarkMode
+                            ? 'bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white'
+                            : 'bg-slate-200/50 hover:bg-slate-300/50 text-slate-700 hover:text-slate-900'
+                    }`}
                     aria-label="How to Play"
                 >
                     <Info className="w-6 h-6" />
@@ -256,25 +280,35 @@ export default function Home() {
 
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-5xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+                    <h1 className={`text-5xl font-bold mb-2 flex items-center justify-center gap-3 ${
+                        isDarkMode ? 'text-white' : 'text-slate-900'
+                    }`}>
                         <Coffee className="w-12 h-12 text-amber-500" />
                         The Office Coffee Run
                     </h1>
-                    <p className="text-slate-300 text-lg">{currentLevel.name}</p>
-                    <p className="text-slate-400 text-sm mt-1">{currentLevel.gridSize}x{currentLevel.gridSize} Grid</p>
+                    <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{currentLevel.name}</p>
+                    <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {currentLevel.gridSize}x{currentLevel.gridSize} Grid
+                    </p>
                 </div>
 
                 {/* Game Stats */}
-                <div className="flex justify-between items-center mb-6 bg-slate-800/50 backdrop-blur rounded-lg p-4">
+                <div className={`flex justify-between items-center mb-6 backdrop-blur rounded-lg p-4 ${
+                    isDarkMode ? 'bg-slate-800/50' : 'bg-slate-200/50'
+                }`}>
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-white">{score}</div>
-                        <div className="text-sm text-slate-400">Score</div>
+                        <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{score}</div>
+                        <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Score</div>
                     </div>
                     <div className="text-center">
-                        <div className={`text-3xl font-bold ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                        <div className={`text-3xl font-bold ${
+                            timeLeft <= 10 
+                                ? 'text-red-500 animate-pulse' 
+                                : isDarkMode ? 'text-white' : 'text-slate-900'
+                        }`}>
                             {timeLeft}s
                         </div>
-                        <div className="text-sm text-slate-400">Time Left</div>
+                        <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Left</div>
                     </div>
                     {!gameStarted && (
                         <button
@@ -386,7 +420,9 @@ export default function Home() {
                                                       'w-10 h-10 md:w-12 md:h-12';
 
                                     return (
-                                        <div key={idx} className={`relative ${tileSize} bg-slate-700/30 rounded-lg`}>
+                                        <div key={idx} className={`relative ${tileSize} rounded-lg ${
+                                            isDarkMode ? 'bg-slate-700/30' : 'bg-slate-300/30'
+                                        }`}>
                                             {tile && (
                                                 <GameTile
                                                     tile={tile}
@@ -423,32 +459,44 @@ export default function Home() {
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.8, opacity: 0 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+                                className={`rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto ${
+                                    isDarkMode ? 'bg-slate-800' : 'bg-white'
+                                }`}
                             >
                                 <div className="flex justify-between items-start mb-6">
-                                    <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                                    <h2 className={`text-3xl font-bold flex items-center gap-2 ${
+                                        isDarkMode ? 'text-white' : 'text-slate-900'
+                                    }`}>
                                         <Info className="w-8 h-8 text-amber-500" />
                                         How to Play
                                     </h2>
                                     <button
                                         onClick={() => setShowInfoModal(false)}
-                                        className="p-2 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                                        className={`p-2 rounded-full transition-colors ${
+                                            isDarkMode
+                                                ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+                                                : 'hover:bg-slate-200 text-slate-600 hover:text-slate-900'
+                                        }`}
                                         aria-label="Close"
                                     >
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
 
-                                <div className="space-y-6 text-slate-300">
+                                <div className={`space-y-6 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                                     <div>
-                                        <h3 className="text-xl font-semibold text-white mb-2">🎮 Game Overview</h3>
-                                        <p className="text-slate-300">
+                                        <h3 className={`text-xl font-semibold mb-2 ${
+                                            isDarkMode ? 'text-white' : 'text-slate-900'
+                                        }`}>🎮 Game Overview</h3>
+                                        <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
                                             Slide tiles in a 4×4 grid to position the coffee tile and deliver coffee to sleeping employees before time runs out!
                                         </p>
                                     </div>
 
                                     <div>
-                                        <h3 className="text-xl font-semibold text-white mb-2">📋 Instructions</h3>
+                                        <h3 className={`text-xl font-semibold mb-2 ${
+                                            isDarkMode ? 'text-white' : 'text-slate-900'
+                                        }`}>📋 Instructions</h3>
                                         <ol className="list-decimal list-inside space-y-2 ml-2">
                                             <li>Click <strong>Start Game</strong> to begin</li>
                                             <li><strong>Slide tiles</strong> by clicking on tiles adjacent to the empty space</li>
@@ -461,14 +509,18 @@ export default function Home() {
                                     </div>
 
                                     <div>
-                                        <h3 className="text-xl font-semibold text-white mb-2">🏆 Winning Condition</h3>
-                                        <p className="text-slate-300">
+                                        <h3 className={`text-xl font-semibold mb-2 ${
+                                            isDarkMode ? 'text-white' : 'text-slate-900'
+                                        }`}>🏆 Winning Condition</h3>
+                                        <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
                                             Solve the puzzle by arranging tiles 1-15 in order AND keep the CEO neutral or happy to win +15 bonus points!
                                         </p>
                                     </div>
 
                                     <div>
-                                        <h3 className="text-xl font-semibold text-white mb-2">👔 CEO Mood</h3>
+                                        <h3 className={`text-xl font-semibold mb-2 ${
+                                            isDarkMode ? 'text-white' : 'text-slate-900'
+                                        }`}>👔 CEO Mood</h3>
                                         <ul className="list-disc list-inside space-y-1 ml-2">
                                             <li><span className="text-green-500">😊 Happy</span>: Score ≥ 10 points</li>
                                             <li><span className="text-blue-500">😐 Neutral</span>: Default state</li>
@@ -476,8 +528,12 @@ export default function Home() {
                                         </ul>
                                     </div>
 
-                                    <div className="pt-4 border-t border-slate-700">
-                                        <p className="text-sm text-slate-400">
+                                    <div className={`pt-4 border-t ${
+                                        isDarkMode ? 'border-slate-700' : 'border-slate-300'
+                                    }`}>
+                                        <p className={`text-sm ${
+                                            isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                                        }`}>
                                             <strong>Tip:</strong> The faster you deliver coffee, the happier the CEO will be! 🎯
                                         </p>
                                     </div>
@@ -500,21 +556,25 @@ export default function Home() {
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.8, opacity: 0 }}
-                                className="bg-slate-800 rounded-2xl p-8 text-center max-w-md"
+                                className={`rounded-2xl p-8 text-center max-w-md ${
+                                    isDarkMode ? 'bg-slate-800' : 'bg-white'
+                                }`}
                             >
                                 {gameWon ? (
                                     <>
                                         <h2 className="text-4xl font-bold text-green-500 mb-4">🎉 You Won!</h2>
-                                        <p className="text-slate-300 mb-2">Puzzle Solved!</p>
+                                        <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>Puzzle Solved!</p>
                                         <p className="text-6xl font-bold text-green-500 mb-2">{score}</p>
-                                        <p className="text-slate-300 mb-1">Total Score</p>
+                                        <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>Total Score</p>
                                         <p className="text-sm text-green-400 mb-6">+15 Bonus Points!</p>
                                     </>
                                 ) : (
                                     <>
-                                        <h2 className="text-4xl font-bold text-white mb-4">Time&apos;s Up!</h2>
+                                        <h2 className={`text-4xl font-bold mb-4 ${
+                                            isDarkMode ? 'text-white' : 'text-slate-900'
+                                        }`}>Time&apos;s Up!</h2>
                                         <p className="text-6xl font-bold text-amber-500 mb-2">{score}</p>
-                                        <p className="text-slate-300 mb-6">Coffees Delivered</p>
+                                        <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>Coffees Delivered</p>
                                     </>
                                 )}
                                 <button
