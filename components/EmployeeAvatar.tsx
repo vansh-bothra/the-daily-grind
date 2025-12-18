@@ -26,16 +26,33 @@ export function EmployeeAvatar({
         <motion.div
             animate={isSleeping ? { scale: [1, 1.1, 1] } : {}}
             transition={{ repeat: Infinity, duration: 1.5 }}
-            className={`w-12 h-12 rounded-full flex items-center justify-center ${
+            className={`w-12 h-12 rounded-full flex items-center justify-center overflow-hidden ${
                 isSleeping ? employeeType.sleepingColor : employeeType.awakeColor
             }`}
         >
-            {isSleeping ? (
-                <span className="text-xl">😴</span>
-            ) : isEmoji ? (
-                <span className="text-xl">{icon}</span>
+            {employee.imageUrl ? (
+                <div className="relative w-full h-full">
+                    <img 
+                        src={employee.imageUrl} 
+                        alt={employee.name || 'Employee'} 
+                        className={`w-full h-full object-cover ${isSleeping ? 'brightness-75' : ''}`}
+                    />
+                    {isSleeping && (
+                        <div className="absolute inset-0 bg-red-500/40 flex items-center justify-center">
+                            <span className="text-2xl">😴</span>
+                        </div>
+                    )}
+                </div>
             ) : (
-                <User className="w-6 h-6 text-slate-300" />
+                <>
+                    {isSleeping ? (
+                        <span className="text-xl">😴</span>
+                    ) : isEmoji ? (
+                        <span className="text-xl">{icon}</span>
+                    ) : (
+                        <User className="w-6 h-6 text-slate-300" />
+                    )}
+                </>
             )}
         </motion.div>
     );
