@@ -196,3 +196,42 @@ export const checkCanPour = (
     return { canPour: false, direction: null };
 };
 
+/**
+ * Checks if the puzzle is solved (tiles are in correct order)
+ * Tiles should be arranged from 1-15 in order, with empty slot at bottom-right
+ */
+export const isPuzzleSolved = (tiles: Tile[], emptyPos: Position, gridSize: number): boolean => {
+    const totalTiles = gridSize * gridSize - 1; // 15 for 4x4
+    
+    // Check if empty slot is in correct position (bottom-right)
+    if (emptyPos.row !== gridSize - 1 || emptyPos.col !== gridSize - 1) {
+        return false;
+    }
+    
+    // Check if all tiles are in correct positions
+    for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+            // Skip empty slot
+            if (row === gridSize - 1 && col === gridSize - 1) {
+                continue;
+            }
+            
+            // Find tile at this position
+            const tile = tiles.find(t => t.position.row === row && t.position.col === col);
+            if (!tile) {
+                return false;
+            }
+            
+            // Calculate expected value for this position
+            const expectedValue = row * gridSize + col + 1;
+            
+            // Check if tile value matches expected value
+            if (tile.value !== expectedValue) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+};
+

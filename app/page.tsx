@@ -17,6 +17,7 @@ import {
     createEmployees,
     getTargetCell,
     checkCanPour,
+    isPuzzleSolved,
 } from '@/utils/game.utils';
 import { playDeliverySound, initAudio } from '@/utils/sound.utils';
 
@@ -46,6 +47,7 @@ export default function Home() {
     const [timeLeft, setTimeLeft] = useState(currentLevel.gameDuration);
     const [gameStarted, setGameStarted] = useState(false);
     const [gameOver, setGameOver] = useState(false);
+    const [gameWon, setGameWon] = useState(false);
     
     // Special tile tracking (dynamically determined from level config)
     const [specialTileId, setSpecialTileId] = useState<string>(currentLevel.specialTileId || 'coffee');
@@ -101,6 +103,7 @@ export default function Home() {
         setIsPouring(false);
         setSpecialTileId(specialTile);
         setCeoMood('neutral');
+        setGameWon(false);
         
         // Initialize audio context on game start
         initAudio();
@@ -108,7 +111,7 @@ export default function Home() {
 
     // Timer
     useEffect(() => {
-        if (!gameStarted || gameOver) return;
+        if (!gameStarted || gameOver || gameWon) return;
 
         const timer = setInterval(() => {
             setTimeLeft(prev => {
@@ -121,11 +124,11 @@ export default function Home() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [gameStarted, gameOver]);
+    }, [gameStarted, gameOver, gameWon]);
 
     // Check for pour opportunity
     useEffect(() => {
-        if (!sleepingEmployee || !gameStarted || gameOver) return;
+        if (!sleepingEmployee || !gameStarted || gameOver || gameWon) return;
 
         // Find the special tile (coffee, issue, etc.)
         const specialTile = tiles.find(t => t.tileTypeId === specialTileId);
@@ -150,20 +153,35 @@ export default function Home() {
         );
         setCanPour(canPourTile);
         setPourDirection(direction);
-    }, [tiles, emptyPos, sleepingEmployee, specialTileId, gameStarted, gameOver, currentLevel]);
+    }, [tiles, emptyPos, sleepingEmployee, specialTileId, gameStarted, gameOver, gameWon, currentLevel]);
 
     // Update CEO mood based on performance
     useEffect(() => {
-        if (!gameStarted || gameOver) return;
+        if (!gameStarted || gameOver || gameWon) return;
         
         if (score >= 10) setCeoMood('happy');
         else if (timeLeft <= 10 && score < 5) setCeoMood('frustrated');
         else setCeoMood('neutral');
-    }, [score, timeLeft, gameStarted, gameOver]);
+    }, [score, timeLeft, gameStarted, gameOver, gameWon]);
+
+    // Check for win condition: puzzle solved AND CEO is neutral or happy
+    useEffect(() => {
+        if (!gameStarted || gameOver || gameWon) return;
+        
+        const puzzleSolved = isPuzzleSolved(tiles, emptyPos, currentLevel.gridSize);
+        const ceoIsNeutralOrHappy = ceoMood === 'neutral' || ceoMood === 'happy';
+        
+        if (puzzleSolved && ceoIsNeutralOrHappy) {
+            // Add bonus score and win the game
+            setScore(prev => prev + 15);
+            setGameWon(true);
+            setGameOver(true);
+        }
+    }, [tiles, emptyPos, ceoMood, gameStarted, gameOver, gameWon, currentLevel.gridSize]);
 
     // Handle tile click
     const handleTileClick = (tile: Tile) => {
-        if (!gameStarted || gameOver) return;
+        if (!gameStarted || gameOver || gameWon) return;
 
         // Check if tile is movable (some tiles like "manager" tiles can't move)
         const tileType = currentLevel.tileTypes.find(t => t.id === tile.tileTypeId);
@@ -363,7 +381,7 @@ export default function Home() {
                                                     tileType={tileType}
                                                     isSpecialTile={isSpecialTile}
                                                     onClick={() => handleTileClick(tile)}
-                                                    disabled={!gameStarted || gameOver}
+                                                    disabled={!gameStarted || gameOver || gameWon}
                                                     canPour={isSpecialTile && canPour}
                                                     pourDirection={pourDirection}
                                                     onPour={handlePour}
@@ -393,9 +411,21 @@ export default function Home() {
                                 exit={{ scale: 0.8, opacity: 0 }}
                                 className="bg-slate-800 rounded-2xl p-8 text-center max-w-md"
                             >
-                                <h2 className="text-4xl font-bold text-white mb-4">Time&apos;s Up!</h2>
-                                <p className="text-6xl font-bold text-amber-500 mb-2">{score}</p>
-                                <p className="text-slate-300 mb-6">Coffees Delivered</p>
+                                {gameWon ? (
+                                    <>
+                                        <h2 className="text-4xl font-bold text-green-500 mb-4">🎉 You Won!</h2>
+                                        <p className="text-slate-300 mb-2">Puzzle Solved!</p>
+                                        <p className="text-6xl font-bold text-green-500 mb-2">{score}</p>
+                                        <p className="text-slate-300 mb-1">Total Score</p>
+                                        <p className="text-sm text-green-400 mb-6">+15 Bonus Points!</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h2 className="text-4xl font-bold text-white mb-4">Time&apos;s Up!</h2>
+                                        <p className="text-6xl font-bold text-amber-500 mb-2">{score}</p>
+                                        <p className="text-slate-300 mb-6">Coffees Delivered</p>
+                                    </>
+                                )}
                                 <button
                                     onClick={() => window.location.reload()}
                                     className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors"
