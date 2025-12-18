@@ -22,6 +22,7 @@ import {
     isAdjacentToManager,
 } from '@/utils/game.utils';
 import { playDeliverySound, initAudio } from '@/utils/sound.utils';
+import { calculateMinimumMoves, calculateAllowedMoves } from '@/utils/pathfinding.utils';
 
 // Components
 import { GameTile } from '@/components/GameTile';
@@ -69,6 +70,12 @@ export default function Home() {
     
     // Theme state
     const [isDarkMode, setIsDarkMode] = useState(true);
+    
+    // Move restriction state
+    const [currentMoves, setCurrentMoves] = useState(0);
+    const [minimumMoves, setMinimumMoves] = useState<number>(0);
+    const [allowedMoves, setAllowedMoves] = useState<number>(Infinity);
+    const [movesRestricted, setMovesRestricted] = useState(false);
 
     // Handle level change
     const handleLevelChange = (newLevelIndex: number) => {
@@ -141,6 +148,10 @@ export default function Home() {
         setGameWon(false);
         setManagerCount(0);
         setGameOverReason('');
+        setCurrentMoves(0);
+        setMinimumMoves(0);
+        setAllowedMoves(Infinity);
+        setMovesRestricted(false);
         
         // Initialize audio context on game start
         initAudio();
@@ -167,6 +178,27 @@ export default function Home() {
     }, [gameStarted, gameOver, gameWon, currentLevel.gameDuration]);
 
     // Manager spawning/moving based on deliveries (handled in handlePour)
+    
+    // Calculate minimum moves at the start of each delivery (score change)
+    useEffect(() => {
+        if (!gameStarted || gameOver || gameWon || !sleepingEmployee) return;
+        
+        const specialTile = tiles.find(t => t.tileTypeId === specialTileId);
+        if (!specialTile) return;
+        
+        const targetCell = getTargetCell(sleepingEmployee, currentLevel.gridSize);
+        
+        // Calculate minimum moves for this delivery
+        const minMoves = calculateMinimumMoves(tiles, specialTile, targetCell, emptyPos, currentLevel.gridSize);
+        setMinimumMoves(minMoves);
+        
+        // Calculate allowed moves based on score
+        const allowed = calculateAllowedMoves(minMoves, score);
+        setAllowedMoves(allowed);
+        
+        // Check if moves are restricted (after 5 deliveries)
+        setMovesRestricted(score >= 5);
+    }, [score, gameStarted]); // Only recalculate when score changes (new delivery)
 
     // Check for pour opportunity and manager adjacency
     useEffect(() => {
@@ -202,7 +234,13 @@ export default function Home() {
         );
         setCanPour(canPourTile);
         setPourDirection(direction);
-    }, [tiles, emptyPos, sleepingEmployee, specialTileId, gameStarted, gameOver, gameWon, currentLevel]);
+        
+        // Check if out of moves (using the frozen minimumMoves from start of delivery)
+        if (movesRestricted && currentMoves >= allowedMoves) {
+            setGameOver(true);
+            setGameOverReason('Out of moves! 🚫');
+        }
+    }, [tiles, emptyPos, sleepingEmployee, specialTileId, gameStarted, gameOver, gameWon, currentLevel, currentMoves, movesRestricted, allowedMoves]);
 
     // Update CEO mood based on performance
     useEffect(() => {
@@ -247,6 +285,11 @@ export default function Home() {
             (col === emptyCol && Math.abs(row - emptyRow) === 1);
 
         if (!isAdjacent) return;
+        
+        // Check if move limit reached (after 5 deliveries)
+        if (movesRestricted && currentMoves >= allowedMoves) {
+            return; // Can't move if out of moves
+        }
 
         // Swap tile with empty slot
         setTiles(prevTiles =>
@@ -257,6 +300,9 @@ export default function Home() {
             )
         );
         setEmptyPos({ row, col });
+        
+        // Increment move counter
+        setCurrentMoves(prev => prev + 1);
     };
 
     // Handle pour
@@ -288,8 +334,8 @@ export default function Home() {
                 const currentManagers = prevTiles.filter(t => t.tileTypeId === 'manager').length;
                 const maxManagers = currentLevel.maxManagers || 0;
                 
-                // First manager appears after 10 deliveries
-                if (newScore === 10 && currentManagers === 0 && maxManagers > 0) {
+                // First manager appears after 5 deliveries
+                if (newScore === 5 && currentManagers === 0 && maxManagers > 0) {
                     const specialTile = prevTiles.find(t => t.tileTypeId === specialTileId);
                     if (!specialTile) return prevTiles;
                     
@@ -304,8 +350,8 @@ export default function Home() {
                         );
                     }
                 }
-                // After 10 deliveries, move manager after each delivery
-                else if (newScore > 10 && currentManagers > 0) {
+                // After 5 deliveries, move manager after each delivery
+                else if (newScore > 5 && currentManagers > 0) {
                     const specialTile = prevTiles.find(t => t.tileTypeId === specialTileId);
                     if (!specialTile) return prevTiles;
                     
@@ -316,7 +362,7 @@ export default function Home() {
                     
                     // Find new manager position(s)
                     const managersToSpawn = Math.min(
-                        Math.floor((newScore - 10) / 5) + 1, // 1 manager at 10, 2 at 15, 3 at 20, etc.
+                        Math.floor((newScore - 5) / 5) + 1, // 1 manager at 5, 2 at 10, 3 at 15, etc.
                         maxManagers
                     );
                     
@@ -348,6 +394,10 @@ export default function Home() {
             setCanPour(false);
             setPourDirection(null);
             setIsPouring(false);
+            
+            // Reset move counter for next delivery
+            setCurrentMoves(0);
+            // Note: Minimum moves will be calculated by the useEffect that listens to score changes
         }, 1500); // Animation duration
     };
 
@@ -452,9 +502,9 @@ export default function Home() {
                     <div className="text-center">
                         <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{score}</div>
                         <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Deliveries</div>
-                        {score < 10 && gameStarted && !gameOver && (
+                        {score < 5 && gameStarted && !gameOver && (
                             <div className={`text-xs mt-1 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                                {10 - score} until manager
+                                {5 - score} until manager
                             </div>
                         )}
                     </div>
@@ -464,6 +514,23 @@ export default function Home() {
                                 {tiles.filter(t => t.tileTypeId === 'manager').length}
                             </div>
                             <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Managers 👔</div>
+                        </div>
+                    )}
+                    {gameStarted && movesRestricted && (
+                        <div className="text-center">
+                            <div className={`text-3xl font-bold ${
+                                currentMoves >= allowedMoves
+                                    ? 'text-red-500 animate-pulse'
+                                    : currentMoves >= allowedMoves * 0.8
+                                    ? 'text-yellow-500'
+                                    : isDarkMode ? 'text-cyan-400' : 'text-cyan-600'
+                            }`}>
+                                {currentMoves}/{allowedMoves === Infinity ? '∞' : allowedMoves}
+                            </div>
+                            <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Moves</div>
+                            <div className={`text-xs mt-1 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                Min: {minimumMoves}
+                            </div>
                         </div>
                     )}
                     {gameStarted && (
@@ -695,7 +762,7 @@ export default function Home() {
                                             <li><strong>Position the special tile</strong>: Move the special tile (coffee, GitHub issue, etc.) to the grid cell next to the sleeping employee</li>
                                             <li><strong>Deliver</strong>: When positioned correctly, a green button will appear - click to deliver!</li>
                                             <li><strong>Score points</strong>: Each delivery = +1 point</li>
-                                            <li><strong>Avoid managers</strong>: After 10 deliveries, managers 👔 will appear and move around. Don't let them catch your special tile!</li>
+                                            <li><strong>Avoid managers</strong>: After 5 deliveries, managers 👔 will appear and move around. Don't let them catch your special tile!</li>
                                             <li><strong>Beat the clock</strong>: Score as many points as possible (or solve the puzzle for bonus points)</li>
                                         </ol>
                                     </div>
@@ -714,11 +781,26 @@ export default function Home() {
                                             isDarkMode ? 'text-white' : 'text-slate-900'
                                         }`}>👔 Managers</h3>
                                         <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li>Managers appear after <strong>10 deliveries</strong></li>
+                                            <li>Managers appear after <strong>5 deliveries</strong></li>
                                             <li>They move around the grid after each delivery</li>
                                             <li>If a manager is adjacent to your special tile, <strong>game over!</strong></li>
                                             <li>More managers spawn as your score increases</li>
                                             <li>Managers are immovable obstacles - plan your moves carefully!</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h3 className={`text-xl font-semibold mb-2 ${
+                                            isDarkMode ? 'text-white' : 'text-slate-900'
+                                        }`}>🎯 Move Restrictions</h3>
+                                        <ul className="list-disc list-inside space-y-1 ml-2">
+                                            <li>After <strong>10 deliveries</strong>, moves become limited per delivery</li>
+                                            <li>The game calculates the <strong>minimum moves</strong> needed to reach the destination</li>
+                                            <li>You get <strong>minimum + bonus moves</strong> (bonus starts at +5, gradually decreases)</li>
+                                            <li>Each tile swap counts as one move</li>
+                                            <li>Moves reset after each delivery</li>
+                                            <li>If you run out of moves, <strong>game over!</strong></li>
+                                            <li>Plan your path efficiently!</li>
                                         </ul>
                                     </div>
 
