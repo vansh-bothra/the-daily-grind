@@ -18,6 +18,7 @@ import {
     getTargetCell,
     checkCanPour,
 } from '@/utils/game.utils';
+import { playDeliverySound, initAudio } from '@/utils/sound.utils';
 
 // Components
 import { GameTile } from '@/components/GameTile';
@@ -100,6 +101,9 @@ export default function Home() {
         setIsPouring(false);
         setSpecialTileId(specialTile);
         setCeoMood('neutral');
+        
+        // Initialize audio context on game start
+        initAudio();
     }, [currentLevel]);
 
     // Timer
@@ -193,6 +197,9 @@ export default function Home() {
         if (!sleepingEmployee || isPouring) return;
 
         setIsPouring(true);
+        
+        // Play delivery sound effect
+        playDeliverySound();
 
         // Wait for animation to complete
         setTimeout(() => {
