@@ -54,5 +54,7 @@ export type Employee = {
     position: EmployeePosition;
     index: number;
     employeeTypeId: string;        // References EmployeeTypeConfig.id
+    imageUrl?: string;             // Optional employee image URL
+    name?: string;                  // Optional employee name
 };
 

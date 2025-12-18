@@ -22,6 +22,7 @@ import {
 // Components
 import { GameTile } from '@/components/GameTile';
 import { EmployeeAvatar } from '@/components/EmployeeAvatar';
+import { CEOAvatar } from '@/components/CEOAvatar';
 
 // ============================================================================
 // MAIN GAME COMPONENT
@@ -52,6 +53,9 @@ export default function Home() {
     const [canPour, setCanPour] = useState(false);
     const [pourDirection, setPourDirection] = useState<EmployeePosition | null>(null);
     const [isPouring, setIsPouring] = useState(false);
+    
+    // CEO state
+    const [ceoMood, setCeoMood] = useState<'happy' | 'neutral' | 'frustrated'>('neutral');
 
     // Initialize game with current level
     const initGame = useCallback(() => {
@@ -95,6 +99,7 @@ export default function Home() {
         setPourDirection(null);
         setIsPouring(false);
         setSpecialTileId(specialTile);
+        setCeoMood('neutral');
     }, [currentLevel]);
 
     // Timer
@@ -142,6 +147,15 @@ export default function Home() {
         setCanPour(canPourTile);
         setPourDirection(direction);
     }, [tiles, emptyPos, sleepingEmployee, specialTileId, gameStarted, gameOver, currentLevel]);
+
+    // Update CEO mood based on performance
+    useEffect(() => {
+        if (!gameStarted || gameOver) return;
+        
+        if (score >= 10) setCeoMood('happy');
+        else if (timeLeft <= 10 && score < 5) setCeoMood('frustrated');
+        else setCeoMood('neutral');
+    }, [score, timeLeft, gameStarted, gameOver]);
 
     // Handle tile click
     const handleTileClick = (tile: Tile) => {
@@ -245,6 +259,13 @@ export default function Home() {
 
                 {/* Game Board */}
                 <div className="relative mx-auto" style={{ width: 'fit-content' }}>
+                    {/* CEO Watching */}
+                    {gameStarted && (
+                        <div className="absolute -top-24 left-1/2 -translate-x-1/2">
+                            <CEOAvatar mood={ceoMood} />
+                        </div>
+                    )}
+                    
                     {/* Employee Ring with proper padding */}
                     <div className="relative p-16 md:p-20">
                         {/* Top Employees */}

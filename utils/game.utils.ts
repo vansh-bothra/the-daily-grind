@@ -14,6 +14,7 @@ import {
 
 /**
  * Creates initial tiles for a given level configuration
+ * Regular tiles are numbered 1-14, coffee tile is numbered 15
  * The special tile (e.g., coffee) is placed in the middle
  * One tile is left empty (bottom-right corner)
  */
@@ -23,7 +24,9 @@ export const createInitialTiles = (level: LevelConfig): Tile[] => {
     const gridSize = level.gridSize;
     const middleTileIndex = Math.floor((gridSize * gridSize) / 2);
     const specialTileId = level.specialTileId || level.tileTypes[0].id;
+    const totalTiles = (gridSize * gridSize) - 1; // Total tiles excluding empty slot (15 for 4x4)
 
+    // First pass: create all tiles with positions
     for (let row = 0; row < gridSize; row++) {
         for (let col = 0; col < gridSize; col++) {
             // Skip the empty slot (bottom-right corner)
@@ -32,16 +35,27 @@ export const createInitialTiles = (level: LevelConfig): Tile[] => {
             }
             
             // Determine tile type - special tile in middle, regular tiles elsewhere
-            const tileTypeId = (id === middleTileIndex) ? specialTileId : 'regular';
+            const isSpecialTile = id === middleTileIndex;
+            const tileTypeId = isSpecialTile ? specialTileId : 'regular';
             
             tiles.push({
                 id: id++,
-                value: id,
+                value: 0, // Will be assigned in second pass
                 position: { row, col },
                 tileTypeId: tileTypeId,
             });
         }
     }
+
+    // Second pass: assign values (1-14 for regular tiles, 15 for special tile)
+    let regularValueCounter = 1;
+    tiles.forEach(tile => {
+        if (tile.tileTypeId === 'regular') {
+            tile.value = regularValueCounter++;
+        } else {
+            tile.value = totalTiles; // 15 for 4x4 grid
+        }
+    });
 
     return tiles;
 };
@@ -94,6 +108,7 @@ export const getValidMoves = (emptyPos: Position, gridSize: number): Position[] 
  * Creates employees for a given level configuration
  * Distributes them evenly around the grid (top, right, bottom, left)
  * If multiple employee types exist, randomly assigns types
+ * Assigns employee images and names if available
  */
 export const createEmployees = (level: LevelConfig): Employee[] => {
     const employees: Employee[] = [];
@@ -107,11 +122,18 @@ export const createEmployees = (level: LevelConfig): Employee[] => {
             const randomTypeIndex = Math.floor(Math.random() * level.employeeTypes.length);
             const employeeType = level.employeeTypes[randomTypeIndex];
             
+            // Assign image URL and name (employee-1.jpg through employee-16.jpg)
+            const employeeNumber = (id % 16) + 1;
+            const imageUrl = `/employees/employee-${employeeNumber}.jpg`;
+            const name = `Employee ${employeeNumber}`;
+            
             employees.push({
                 id: id++,
                 position,
                 index: i,
                 employeeTypeId: employeeType.id,
+                imageUrl,
+                name,
             });
         }
     });
