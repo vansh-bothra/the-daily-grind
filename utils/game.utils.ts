@@ -174,3 +174,137 @@ export const checkCanPour = (
     return { canPour: false, direction: null };
 };
 
+/**
+ * Gets tiles that should be blocked for manager placement to prevent path blocking
+ * This includes diagonal tiles for corner positions to ensure maneuverability
+ */
+const getBlockedTilesForPosition = (position: Position, gridSize: number): Position[] => {
+    const blocked: Position[] = [];
+    const { row, col } = position;
+    
+    // Check if position is on an edge
+    const isTopEdge = row === 0;
+    const isBottomEdge = row === gridSize - 1;
+    const isLeftEdge = col === 0;
+    const isRightEdge = col === gridSize - 1;
+    
+    // For corner positions, block the diagonal inner tile to allow movement
+    if (isTopEdge && isLeftEdge) {
+        // Top-left corner: block (1, 1)
+        if (gridSize > 2) blocked.push({ row: 1, col: 1 });
+    } else if (isTopEdge && isRightEdge) {
+        // Top-right corner: block (1, gridSize-2)
+        if (gridSize > 2) blocked.push({ row: 1, col: gridSize - 2 });
+    } else if (isBottomEdge && isLeftEdge) {
+        // Bottom-left corner: block (gridSize-2, 1)
+        if (gridSize > 2) blocked.push({ row: gridSize - 2, col: 1 });
+    } else if (isBottomEdge && isRightEdge) {
+        // Bottom-right corner: block (gridSize-2, gridSize-2)
+        if (gridSize > 2) blocked.push({ row: gridSize - 2, col: gridSize - 2 });
+    }
+    // For edge (non-corner) positions, block the perpendicular inner tile
+    else if (isTopEdge && !isLeftEdge && !isRightEdge) {
+        // Top edge: block the tile directly below
+        if (row + 1 < gridSize) blocked.push({ row: row + 1, col });
+    } else if (isBottomEdge && !isLeftEdge && !isRightEdge) {
+        // Bottom edge: block the tile directly above
+        if (row - 1 >= 0) blocked.push({ row: row - 1, col });
+    } else if (isLeftEdge && !isTopEdge && !isBottomEdge) {
+        // Left edge: block the tile directly to the right
+        if (col + 1 < gridSize) blocked.push({ row, col: col + 1 });
+    } else if (isRightEdge && !isTopEdge && !isBottomEdge) {
+        // Right edge: block the tile directly to the left
+        if (col - 1 >= 0) blocked.push({ row, col: col - 1 });
+    }
+    
+    return blocked;
+};
+
+/**
+ * Converts a regular tile to a manager tile (makes it immovable)
+ * Rules:
+ * - Not on edge cells (where employees are)
+ * - Not adjacent to the active tile (Manhattan distance > 1)
+ * - Not adjacent to target cell (Manhattan distance > 1)
+ * - Not on diagonal tiles for corner destinations (blocks movement)
+ * - Not on diagonal tiles for corner active tiles (blocks movement)
+ * - Not the active tile itself
+ * - Not the empty position
+ */
+export const findValidManagerTile = (
+    tiles: Tile[],
+    activeTile: Tile,
+    targetCell: Position,
+    emptyPos: Position,
+    gridSize: number
+): Tile | null => {
+    // Get tiles that would block paths around destination
+    const blockedDestTiles = getBlockedTilesForPosition(targetCell, gridSize);
+    
+    // Get tiles that would block paths around active tile
+    const blockedActiveTiles = getBlockedTilesForPosition(activeTile.position, gridSize);
+    
+    // Combine all blocked tiles
+    const allBlockedTiles = [...blockedDestTiles, ...blockedActiveTiles];
+    const blockedSet = new Set(allBlockedTiles.map(p => `${p.row},${p.col}`));
+    
+    const validTiles = tiles.filter(tile => {
+        // Skip the active tile
+        if (tile.id === activeTile.id) return false;
+        
+        // Skip if already a manager
+        if (tile.tileTypeId === 'manager') return false;
+        
+        const { row, col } = tile.position;
+        
+        // Skip if on edge (where employees are)
+        if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) {
+            return false;
+        }
+        
+        // Skip if at empty position (shouldn't happen but be safe)
+        if (row === emptyPos.row && col === emptyPos.col) return false;
+        
+        // Skip if on a blocked tile that would prevent movement
+        if (blockedSet.has(`${row},${col}`)) return false;
+        
+        // Check distance from active tile (must be > 1 Manhattan distance)
+        const distFromActive = Math.abs(row - activeTile.position.row) + Math.abs(col - activeTile.position.col);
+        if (distFromActive <= 1) return false;
+        
+        // Check distance from target (must be > 1)
+        const distFromTarget = Math.abs(row - targetCell.row) + Math.abs(col - targetCell.col);
+        if (distFromTarget <= 1) return false;
+        
+        return true;
+    });
+    
+    // Return random valid tile
+    if (validTiles.length === 0) return null;
+    return validTiles[Math.floor(Math.random() * validTiles.length)];
+};
+
+/**
+ * Checks if the active tile is adjacent to any manager tile
+ * Returns true if game should end (caught by manager)
+ */
+export const isAdjacentToManager = (
+    activeTile: Tile,
+    tiles: Tile[]
+): boolean => {
+    const { row, col } = activeTile.position;
+    const adjacentPositions = [
+        { row: row - 1, col },
+        { row: row + 1, col },
+        { row, col: col - 1 },
+        { row, col: col + 1 },
+    ];
+    
+    return tiles.some(tile => {
+        if (tile.tileTypeId !== 'manager') return false;
+        return adjacentPositions.some(
+            pos => pos.row === tile.position.row && pos.col === tile.position.col
+        );
+    });
+};
+

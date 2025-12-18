@@ -88,31 +88,34 @@ export const LEVELS: LevelConfig[] = [
         id: 1,
         name: 'Coffee Run - Easy',
         gridSize: 4,
-        gameDuration: 80,
+        gameDuration: 0, // Infinite game
         tileTypes: [TILE_TYPES.coffee],
         employeeTypes: [EMPLOYEE_TYPES.regular],
         specialTileId: 'coffee',
         employeesPerSide: 4,
+        maxManagers: 1,
     },
     {
         id: 2,
         name: 'Developer Support - Medium',
-        gridSize: 6,
-        gameDuration: 100,
+        gridSize: 5,
+        gameDuration: 0, // Infinite game
         tileTypes: [TILE_TYPES.githubIssue],
         employeeTypes: [EMPLOYEE_TYPES.developer],
         specialTileId: 'github-issue',
-        employeesPerSide: 6,
+        employeesPerSide: 5,
+        maxManagers: 2,
     },
     {
         id: 3,
         name: 'Mixed Office - Hard',
-        gridSize: 8,
-        gameDuration: 120,
+        gridSize: 6,
+        gameDuration: 0, // Infinite game
         tileTypes: [TILE_TYPES.coffee, TILE_TYPES.githubIssue, TILE_TYPES.support],
         employeeTypes: [EMPLOYEE_TYPES.regular, EMPLOYEE_TYPES.developer, EMPLOYEE_TYPES.support],
         specialTileId: 'coffee', // Can be changed dynamically in game
-        employeesPerSide: 8,
+        employeesPerSide: 6,
+        maxManagers: 3,
     },
 ];
 

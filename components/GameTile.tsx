@@ -84,14 +84,21 @@ export function GameTile({
         >
             <motion.button
                 onClick={onClick}
-                disabled={disabled || (canPour && !isPouring)}
+                disabled={disabled || (canPour && !isPouring) || tile.tileTypeId === 'manager'}
                 className={`w-full h-full rounded-lg flex flex-col items-center justify-center font-bold text-xl cursor-pointer transition-all relative ${
-                    isSpecialTile && tileType
+                    tile.tileTypeId === 'manager'
+                        ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/50 cursor-not-allowed'
+                        : isSpecialTile && tileType
                         ? tileType.color
                         : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                    } ${disabled && !canPour ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                    } ${disabled && !canPour && tile.tileTypeId !== 'manager' ? 'opacity-50 cursor-not-allowed' : tile.tileTypeId !== 'manager' ? 'hover:scale-105' : ''}`}
             >
-                {isSpecialTile && tileType ? (
+                {tile.tileTypeId === 'manager' ? (
+                    <>
+                        <span className="text-2xl mb-1">👔</span>
+                        <span className="text-xs">{tile.value}</span>
+                    </>
+                ) : isSpecialTile && tileType ? (
                     <>
                         <tileType.icon className="w-8 h-8" />
                         {canPour && !isPouring && (
