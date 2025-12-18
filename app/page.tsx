@@ -519,7 +519,7 @@ export default function Home() {
                             // Calculate employee gap based on grid size
                             // Using fixed gaps that work well visually
                             const employeeGap = 
-                                currentLevel.gridSize === 4 ? 40 : // 4x4: (80 + 8) - 48 = 40px
+                                currentLevel.gridSize === 4 ? 60 : // 4x4: 60px
                                 currentLevel.gridSize === 5 ? 40 : // 5x5: 40px
                                 25; // 6x6: 25px
 
@@ -624,6 +624,7 @@ export default function Home() {
                                                     pourDirection={pourDirection}
                                                     onPour={handlePour}
                                                     isPouring={isPouring}
+                                                    gridSize={currentLevel.gridSize}
                                                 />
                                             )}
                                         </div>
@@ -679,7 +680,7 @@ export default function Home() {
                                             isDarkMode ? 'text-white' : 'text-slate-900'
                                         }`}>🎮 Game Overview</h3>
                                         <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
-                                            Slide tiles in a 4×4 grid to position the coffee tile and deliver coffee to sleeping employees before time runs out!
+                                            Slide tiles in a puzzle grid to position special tiles (coffee, GitHub issues, support tickets) and deliver them to sleeping employees. Avoid managers and score as many points as possible!
                                         </p>
                                     </div>
 
@@ -691,10 +692,11 @@ export default function Home() {
                                             <li>Click <strong>Start Game</strong> to begin</li>
                                             <li><strong>Slide tiles</strong> by clicking on tiles adjacent to the empty space</li>
                                             <li><strong>Find the sleeper</strong>: Look for the employee with a red background and 😴 emoji</li>
-                                            <li><strong>Position the coffee</strong>: Move the orange coffee tile (tile #15) to the grid cell next to the sleeping employee</li>
-                                            <li><strong>Deliver</strong>: When positioned correctly, green arrow(s) will appear - click to deliver!</li>
+                                            <li><strong>Position the special tile</strong>: Move the special tile (coffee, GitHub issue, etc.) to the grid cell next to the sleeping employee</li>
+                                            <li><strong>Deliver</strong>: When positioned correctly, a green button will appear - click to deliver!</li>
                                             <li><strong>Score points</strong>: Each delivery = +1 point</li>
-                                            <li><strong>Beat the clock</strong>: You have 60 seconds to score as many points as possible</li>
+                                            <li><strong>Avoid managers</strong>: After 10 deliveries, managers 👔 will appear and move around. Don't let them catch your special tile!</li>
+                                            <li><strong>Beat the clock</strong>: Score as many points as possible (or solve the puzzle for bonus points)</li>
                                         </ol>
                                     </div>
 
@@ -710,7 +712,20 @@ export default function Home() {
                                     <div>
                                         <h3 className={`text-xl font-semibold mb-2 ${
                                             isDarkMode ? 'text-white' : 'text-slate-900'
-                                        }`}>👔 CEO Mood</h3>
+                                        }`}>👔 Managers</h3>
+                                        <ul className="list-disc list-inside space-y-1 ml-2">
+                                            <li>Managers appear after <strong>10 deliveries</strong></li>
+                                            <li>They move around the grid after each delivery</li>
+                                            <li>If a manager is adjacent to your special tile, <strong>game over!</strong></li>
+                                            <li>More managers spawn as your score increases</li>
+                                            <li>Managers are immovable obstacles - plan your moves carefully!</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h3 className={`text-xl font-semibold mb-2 ${
+                                            isDarkMode ? 'text-white' : 'text-slate-900'
+                                        }`}>😊 CEO Mood</h3>
                                         <ul className="list-disc list-inside space-y-1 ml-2">
                                             <li><span className="text-green-500">😊 Happy</span>: Score ≥ 10 points</li>
                                             <li><span className="text-blue-500">😐 Neutral</span>: Default state</li>

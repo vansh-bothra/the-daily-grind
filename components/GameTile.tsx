@@ -15,6 +15,7 @@ interface GameTileProps {
     pourDirection?: EmployeePosition | null;
     onPour?: () => void;
     isPouring?: boolean;
+    gridSize?: number;
 }
 
 export function GameTile({
@@ -26,7 +27,8 @@ export function GameTile({
     canPour,
     pourDirection,
     onPour,
-    isPouring
+    isPouring,
+    gridSize = 4
 }: GameTileProps) {
     // Generate particle drops based on direction (only for special tiles when pouring)
     const getParticleDrops = () => {
@@ -135,7 +137,7 @@ export function GameTile({
                         transition={{ repeat: Infinity, duration: 1 }}
                         className="bg-green-500 text-white px-3 py-1.5 rounded-lg font-bold text-sm shadow-lg"
                     >
-                        Pour Coffee
+                        {gridSize === 5 ? 'Assign Work' : 'Pour Coffee'}
                     </motion.div>
                 </motion.button>
             )}
