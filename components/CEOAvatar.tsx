@@ -6,9 +6,10 @@ import { motion } from 'framer-motion';
 
 interface CEOAvatarProps {
     mood: 'happy' | 'neutral' | 'frustrated';
+    isDarkMode?: boolean;
 }
 
-export function CEOAvatar({ mood }: CEOAvatarProps) {
+export function CEOAvatar({ mood, isDarkMode = true }: CEOAvatarProps) {
     const emoji = mood === 'happy' ? '😊' : mood === 'frustrated' ? '😠' : '😐';
     const bgColor = mood === 'happy' ? 'bg-green-500' : mood === 'frustrated' ? 'bg-red-500' : 'bg-blue-500';
     
@@ -21,7 +22,7 @@ export function CEOAvatar({ mood }: CEOAvatarProps) {
             <div className={`w-16 h-16 rounded-full ${bgColor} flex items-center justify-center text-3xl shadow-lg`}>
                 {emoji}
             </div>
-            <div className="text-white font-semibold text-sm">CEO</div>
+            <div className={`font-semibold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>CEO</div>
         </motion.div>
     );
 }

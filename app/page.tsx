@@ -401,7 +401,7 @@ export default function Home() {
                 {/* Level Switcher */}
                 <div className="mb-6">
                     <div className="text-center mb-3">
-                        <p className="text-slate-400 text-sm">
+                        <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                             {gameStarted && !gameOver 
                                 ? '🔒 Level locked during game' 
                                 : 'Select Level'}
@@ -421,7 +421,9 @@ export default function Home() {
                                     className={`px-5 py-3 rounded-lg font-semibold transition-all ${
                                         index === levelIndex
                                             ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/50 ring-2 ring-amber-400'
-                                            : 'bg-slate-700/80 text-slate-300 hover:bg-slate-600'
+                                            : isDarkMode 
+                                                ? 'bg-slate-700/80 text-slate-300 hover:bg-slate-600'
+                                                : 'bg-slate-200/80 text-slate-700 hover:bg-slate-300'
                                     } ${
                                         gameStarted && !gameOver
                                             ? 'opacity-50 cursor-not-allowed'
@@ -432,7 +434,9 @@ export default function Home() {
                                         <span className="text-lg">{difficulty}</span>
                                         <div>
                                             <div className="text-sm font-bold">Level {level.id}</div>
-                                            <div className="text-xs opacity-80">{level.gridSize}x{level.gridSize} • Max {level.maxManagers} 👔</div>
+                                            <div className={`text-xs opacity-80 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                {level.gridSize}x{level.gridSize} • Max {level.maxManagers} 👔
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.button>
@@ -454,6 +458,19 @@ export default function Home() {
                             </div>
                         )}
                     </div>
+                    {currentLevel.maxManagers && currentLevel.maxManagers > 0 && (
+                        <div className="text-center">
+                            <div className={`text-3xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                                {tiles.filter(t => t.tileTypeId === 'manager').length}
+                            </div>
+                            <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Managers 👔</div>
+                        </div>
+                    )}
+                    {gameStarted && (
+                        <div className="text-center">
+                            <CEOAvatar mood={ceoMood} isDarkMode={isDarkMode} />
+                        </div>
+                    )}
                     <div className="text-center">
                         {currentLevel.gameDuration > 0 ? (
                             <>
@@ -475,14 +492,6 @@ export default function Home() {
                             </>
                         )}
                     </div>
-                    {currentLevel.maxManagers && currentLevel.maxManagers > 0 && (
-                        <div className="text-center">
-                            <div className={`text-3xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                                {tiles.filter(t => t.tileTypeId === 'manager').length}
-                            </div>
-                            <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Managers 👔</div>
-                        </div>
-                    )}
                     {!gameStarted && (
                         <button
                             onClick={initGame}
@@ -503,86 +512,81 @@ export default function Home() {
 
                 {/* Game Board */}
                 <div className="relative mx-auto" style={{ width: 'fit-content' }}>
-                    {/* CEO Watching */}
-                    {gameStarted && (
-                        <div className="absolute -top-24 left-1/2 -translate-x-1/2">
-                            <CEOAvatar mood={ceoMood} />
-                        </div>
-                    )}
-                    
                     {/* Employee Ring with responsive padding */}
                     <div className="relative" style={{ padding: currentLevel.gridSize === 4 ? '80px' : currentLevel.gridSize === 5 ? '64px' : '56px' }}>
-                        {/* Top Employees */}
-                        <div 
-                            className="absolute top-0 left-1/2 -translate-x-1/2 flex"
-                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
-                        >
-                            {employees.filter(e => e.position === 'top').map(emp => {
-                                const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
-                                return (
-                                    <EmployeeAvatar
-                                        key={emp.id}
-                                        employee={emp}
-                                        employeeType={empType}
-                                        isSleeping={sleepingEmployee?.id === emp.id}
-                                    />
-                                );
-                            })}
-                        </div>
+                        {/* Employee positioning - consistent pattern for all grid sizes */}
+                        {(() => {
+                            // Calculate employee gap based on grid size
+                            // Using fixed gaps that work well visually
+                            const employeeGap = 
+                                currentLevel.gridSize === 4 ? 40 : // 4x4: (80 + 8) - 48 = 40px
+                                currentLevel.gridSize === 5 ? 40 : // 5x5: 40px
+                                25; // 6x6: 25px
 
-                        {/* Right Employees */}
-                        <div 
-                            className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col"
-                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
-                        >
-                            {employees.filter(e => e.position === 'right').map(emp => {
-                                const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
-                                return (
-                                    <EmployeeAvatar
-                                        key={emp.id}
-                                        employee={emp}
-                                        employeeType={empType}
-                                        isSleeping={sleepingEmployee?.id === emp.id}
-                                    />
-                                );
-                            })}
-                        </div>
+                            return (
+                                <>
+                                    {/* Top Employees */}
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 flex" style={{ gap: `${employeeGap}px` }}>
+                                        {employees.filter(e => e.position === 'top').map(emp => {
+                                            const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
+                                            return (
+                                                <EmployeeAvatar
+                                                    key={emp.id}
+                                                    employee={emp}
+                                                    employeeType={empType}
+                                                    isSleeping={sleepingEmployee?.id === emp.id}
+                                                />
+                                            );
+                                        })}
+                                    </div>
 
-                        {/* Bottom Employees */}
-                        <div 
-                            className="absolute bottom-0 left-1/2 -translate-x-1/2 flex"
-                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
-                        >
-                            {employees.filter(e => e.position === 'bottom').map(emp => {
-                                const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
-                                return (
-                                    <EmployeeAvatar
-                                        key={emp.id}
-                                        employee={emp}
-                                        employeeType={empType}
-                                        isSleeping={sleepingEmployee?.id === emp.id}
-                                    />
-                                );
-                            })}
-                        </div>
+                                    {/* Right Employees */}
+                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col" style={{ gap: `${employeeGap}px` }}>
+                                        {employees.filter(e => e.position === 'right').map(emp => {
+                                            const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
+                                            return (
+                                                <EmployeeAvatar
+                                                    key={emp.id}
+                                                    employee={emp}
+                                                    employeeType={empType}
+                                                    isSleeping={sleepingEmployee?.id === emp.id}
+                                                />
+                                            );
+                                        })}
+                                    </div>
 
-                        {/* Left Employees */}
-                        <div 
-                            className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col"
-                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
-                        >
-                            {employees.filter(e => e.position === 'left').map(emp => {
-                                const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
-                                return (
-                                    <EmployeeAvatar
-                                        key={emp.id}
-                                        employee={emp}
-                                        employeeType={empType}
-                                        isSleeping={sleepingEmployee?.id === emp.id}
-                                    />
-                                );
-                            })}
-                        </div>
+                                    {/* Bottom Employees */}
+                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex" style={{ gap: `${employeeGap}px` }}>
+                                        {employees.filter(e => e.position === 'bottom').map(emp => {
+                                            const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
+                                            return (
+                                                <EmployeeAvatar
+                                                    key={emp.id}
+                                                    employee={emp}
+                                                    employeeType={empType}
+                                                    isSleeping={sleepingEmployee?.id === emp.id}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Left Employees */}
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col" style={{ gap: `${employeeGap}px` }}>
+                                        {employees.filter(e => e.position === 'left').map(emp => {
+                                            const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
+                                            return (
+                                                <EmployeeAvatar
+                                                    key={emp.id}
+                                                    employee={emp}
+                                                    employeeType={empType}
+                                                    isSleeping={sleepingEmployee?.id === emp.id}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            );
+                        })()}
 
                         {/* Puzzle Grid */}
                         <div className="bg-slate-800/30 backdrop-blur rounded-2xl shadow-2xl p-4">
