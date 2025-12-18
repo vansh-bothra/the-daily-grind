@@ -32,12 +32,13 @@ export type EmployeeTypeConfig = {
 export type LevelConfig = {
     id: number;
     name: string;
-    gridSize: number;              // 4x4, 6x6, 8x8, etc.
-    gameDuration: number;          // seconds
+    gridSize: number;              // 4x4, 5x5, 6x6, etc.
+    gameDuration: number;          // seconds (0 = infinite)
     tileTypes: TileTypeConfig[];   // Available tile types in this level
     employeeTypes: EmployeeTypeConfig[]; // Available employee types
     specialTileId?: string;        // The tile that needs to be delivered (e.g., 'coffee')
     employeesPerSide: number;      // How many employees on each side
+    maxManagers?: number;          // Maximum manager tiles that can appear
 };
 
 // Tile instance - a specific tile in the game

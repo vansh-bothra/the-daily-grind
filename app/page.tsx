@@ -18,6 +18,8 @@ import {
     getTargetCell,
     checkCanPour,
     isPuzzleSolved,
+    findValidManagerTile,
+    isAdjacentToManager,
 } from '@/utils/game.utils';
 import { playDeliverySound, initAudio } from '@/utils/sound.utils';
 
@@ -44,10 +46,12 @@ export default function Home() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [sleepingEmployee, setSleepingEmployee] = useState<Employee | null>(null);
     const [score, setScore] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(currentLevel.gameDuration);
+    const [timeElapsed, setTimeElapsed] = useState(0);
     const [gameStarted, setGameStarted] = useState(false);
     const [gameOver, setGameOver] = useState(false);
     const [gameWon, setGameWon] = useState(false);
+    const [managerCount, setManagerCount] = useState(0);
+    const [gameOverReason, setGameOverReason] = useState<string>('');
     
     // Special tile tracking (dynamically determined from level config)
     const [specialTileId, setSpecialTileId] = useState<string>(currentLevel.specialTileId || 'coffee');
@@ -65,6 +69,31 @@ export default function Home() {
     
     // Theme state
     const [isDarkMode, setIsDarkMode] = useState(true);
+
+    // Handle level change
+    const handleLevelChange = (newLevelIndex: number) => {
+        if (newLevelIndex < 0 || newLevelIndex >= LEVELS.length) return;
+        
+        const newLevel = LEVELS[newLevelIndex];
+        setCurrentLevel(newLevel);
+        setLevelIndex(newLevelIndex);
+        
+        // Reset game state
+        setGameStarted(false);
+        setGameOver(false);
+        setScore(0);
+        setTimeElapsed(0);
+        setTiles([]);
+        setEmployees([]);
+        setSleepingEmployee(null);
+        setEmptyPos({ row: newLevel.gridSize - 1, col: newLevel.gridSize - 1 });
+        setSpecialTileId(newLevel.specialTileId || 'coffee');
+        setCanPour(false);
+        setPourDirection(null);
+        setIsPouring(false);
+        setManagerCount(0);
+        setGameOverReason('');
+    };
 
     // Initialize game with current level
     const initGame = useCallback(() => {
@@ -101,7 +130,7 @@ export default function Home() {
         setSleepingEmployee(randomEmployee);
 
         setScore(0);
-        setTimeLeft(currentLevel.gameDuration);
+        setTimeElapsed(0);
         setGameStarted(true);
         setGameOver(false);
         setCanPour(false);
@@ -110,35 +139,49 @@ export default function Home() {
         setSpecialTileId(specialTile);
         setCeoMood('neutral');
         setGameWon(false);
+        setManagerCount(0);
+        setGameOverReason('');
         
         // Initialize audio context on game start
         initAudio();
     }, [currentLevel]);
 
-    // Timer
+    // Timer and Manager Spawning
     useEffect(() => {
         if (!gameStarted || gameOver || gameWon) return;
 
         const timer = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
+            setTimeElapsed(prev => {
+                const newTime = prev + 1;
+                // Check if time limit reached (if gameDuration > 0)
+                if (currentLevel.gameDuration > 0 && newTime >= currentLevel.gameDuration) {
                     setGameOver(true);
-                    return 0;
+                    setGameOverReason('Time\'s Up!');
+                    return newTime;
                 }
-                return prev - 1;
+                return newTime;
             });
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [gameStarted, gameOver, gameWon]);
+    }, [gameStarted, gameOver, gameWon, currentLevel.gameDuration]);
 
-    // Check for pour opportunity
+    // Manager spawning/moving based on deliveries (handled in handlePour)
+
+    // Check for pour opportunity and manager adjacency
     useEffect(() => {
         if (!sleepingEmployee || !gameStarted || gameOver || gameWon) return;
 
         // Find the special tile (coffee, issue, etc.)
         const specialTile = tiles.find(t => t.tileTypeId === specialTileId);
         if (!specialTile) return;
+
+        // Check if caught by manager
+        if (isAdjacentToManager(specialTile, tiles)) {
+            setGameOver(true);
+            setGameOverReason('Caught by manager! 👔');
+            return;
+        }
 
         const targetCell = getTargetCell(sleepingEmployee, currentLevel.gridSize);
 
@@ -166,9 +209,9 @@ export default function Home() {
         if (!gameStarted || gameOver || gameWon) return;
         
         if (score >= 10) setCeoMood('happy');
-        else if (timeLeft <= 10 && score < 5) setCeoMood('frustrated');
+        else if (currentLevel.gameDuration > 0 && (currentLevel.gameDuration - timeElapsed) <= 10 && score < 5) setCeoMood('frustrated');
         else setCeoMood('neutral');
-    }, [score, timeLeft, gameStarted, gameOver, gameWon]);
+    }, [score, timeElapsed, currentLevel.gameDuration, gameStarted, gameOver, gameWon]);
 
     // Check for win condition: puzzle solved AND CEO is neutral or happy
     useEffect(() => {
@@ -227,17 +270,80 @@ export default function Home() {
 
         // Wait for animation to complete
         setTimeout(() => {
+            const newScore = score + 1;
+            
             // Increment score
-            setScore(prev => prev + 1);
+            setScore(newScore);
 
-            // Select new sleeping employee that can accept the special tile
+            // Select new sleeping employee ONCE for both manager placement and game state
             const matchingEmployees = employees.filter(emp => {
                 const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
                 return empType && empType.acceptsTileTypes.includes(specialTileId);
             });
+            const nextEmployee = matchingEmployees[Math.floor(Math.random() * matchingEmployees.length)];
+            const nextTargetCell = getTargetCell(nextEmployee, currentLevel.gridSize);
 
-            const randomEmployee = matchingEmployees[Math.floor(Math.random() * matchingEmployees.length)];
-            setSleepingEmployee(randomEmployee);
+            // Handle manager spawning/moving based on deliveries
+            setTiles(prevTiles => {
+                const currentManagers = prevTiles.filter(t => t.tileTypeId === 'manager').length;
+                const maxManagers = currentLevel.maxManagers || 0;
+                
+                // First manager appears after 10 deliveries
+                if (newScore === 10 && currentManagers === 0 && maxManagers > 0) {
+                    const specialTile = prevTiles.find(t => t.tileTypeId === specialTileId);
+                    if (!specialTile) return prevTiles;
+                    
+                    const managerTile = findValidManagerTile(prevTiles, specialTile, nextTargetCell, emptyPos, currentLevel.gridSize);
+                    
+                    if (managerTile) {
+                        setManagerCount(1);
+                        return prevTiles.map(t => 
+                            t.id === managerTile.id 
+                                ? { ...t, tileTypeId: 'manager' }
+                                : t
+                        );
+                    }
+                }
+                // After 10 deliveries, move manager after each delivery
+                else if (newScore > 10 && currentManagers > 0) {
+                    const specialTile = prevTiles.find(t => t.tileTypeId === specialTileId);
+                    if (!specialTile) return prevTiles;
+                    
+                    // First, reset current manager tiles to regular
+                    const tilesWithoutManagers = prevTiles.map(t => 
+                        t.tileTypeId === 'manager' ? { ...t, tileTypeId: 'regular' } : t
+                    );
+                    
+                    // Find new manager position(s)
+                    const managersToSpawn = Math.min(
+                        Math.floor((newScore - 10) / 5) + 1, // 1 manager at 10, 2 at 15, 3 at 20, etc.
+                        maxManagers
+                    );
+                    
+                    let updatedTiles = [...tilesWithoutManagers];
+                    let spawnedManagers = 0;
+                    
+                    for (let i = 0; i < managersToSpawn; i++) {
+                        const newManagerTile = findValidManagerTile(updatedTiles, specialTile, nextTargetCell, emptyPos, currentLevel.gridSize);
+                        if (newManagerTile) {
+                            updatedTiles = updatedTiles.map(t => 
+                                t.id === newManagerTile.id 
+                                    ? { ...t, tileTypeId: 'manager' }
+                                    : t
+                            );
+                            spawnedManagers++;
+                        }
+                    }
+                    
+                    setManagerCount(spawnedManagers);
+                    return updatedTiles;
+                }
+                
+                return prevTiles;
+            });
+
+            // Use the same employee we selected for manager placement
+            setSleepingEmployee(nextEmployee);
 
             setCanPour(false);
             setPourDirection(null);
@@ -292,24 +398,91 @@ export default function Home() {
                     </p>
                 </div>
 
+                {/* Level Switcher */}
+                <div className="mb-6">
+                    <div className="text-center mb-3">
+                        <p className="text-slate-400 text-sm">
+                            {gameStarted && !gameOver 
+                                ? '🔒 Level locked during game' 
+                                : 'Select Level'}
+                        </p>
+                    </div>
+                    <div className="flex justify-center gap-3 flex-wrap">
+                        {LEVELS.map((level, index) => {
+                            const difficulty = level.name.includes('Easy') ? '🟢' : 
+                                             level.name.includes('Medium') ? '🟡' : '🔴';
+                            return (
+                                <motion.button
+                                    key={level.id}
+                                    onClick={() => handleLevelChange(index)}
+                                    disabled={gameStarted && !gameOver}
+                                    whileHover={!(gameStarted && !gameOver) ? { scale: 1.05 } : {}}
+                                    whileTap={!(gameStarted && !gameOver) ? { scale: 0.95 } : {}}
+                                    className={`px-5 py-3 rounded-lg font-semibold transition-all ${
+                                        index === levelIndex
+                                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/50 ring-2 ring-amber-400'
+                                            : 'bg-slate-700/80 text-slate-300 hover:bg-slate-600'
+                                    } ${
+                                        gameStarted && !gameOver
+                                            ? 'opacity-50 cursor-not-allowed'
+                                            : 'hover:shadow-xl'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">{difficulty}</span>
+                                        <div>
+                                            <div className="text-sm font-bold">Level {level.id}</div>
+                                            <div className="text-xs opacity-80">{level.gridSize}x{level.gridSize} • Max {level.maxManagers} 👔</div>
+                                        </div>
+                                    </div>
+                                </motion.button>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 {/* Game Stats */}
                 <div className={`flex justify-between items-center mb-6 backdrop-blur rounded-lg p-4 ${
                     isDarkMode ? 'bg-slate-800/50' : 'bg-slate-200/50'
                 }`}>
                     <div className="text-center">
                         <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{score}</div>
-                        <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Score</div>
+                        <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Deliveries</div>
+                        {score < 10 && gameStarted && !gameOver && (
+                            <div className={`text-xs mt-1 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                                {10 - score} until manager
+                            </div>
+                        )}
                     </div>
                     <div className="text-center">
-                        <div className={`text-3xl font-bold ${
-                            timeLeft <= 10 
-                                ? 'text-red-500 animate-pulse' 
-                                : isDarkMode ? 'text-white' : 'text-slate-900'
-                        }`}>
-                            {timeLeft}s
-                        </div>
-                        <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Left</div>
+                        {currentLevel.gameDuration > 0 ? (
+                            <>
+                                <div className={`text-3xl font-bold ${
+                                    (currentLevel.gameDuration - timeElapsed) <= 10 
+                                        ? 'text-red-500 animate-pulse' 
+                                        : isDarkMode ? 'text-white' : 'text-slate-900'
+                                }`}>
+                                    {Math.max(0, currentLevel.gameDuration - timeElapsed)}s
+                                </div>
+                                <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Left</div>
+                            </>
+                        ) : (
+                            <>
+                                <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                    {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, '0')}
+                                </div>
+                                <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time</div>
+                            </>
+                        )}
                     </div>
+                    {currentLevel.maxManagers && currentLevel.maxManagers > 0 && (
+                        <div className="text-center">
+                            <div className={`text-3xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                                {tiles.filter(t => t.tileTypeId === 'manager').length}
+                            </div>
+                            <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Managers 👔</div>
+                        </div>
+                    )}
                     {!gameStarted && (
                         <button
                             onClick={initGame}
@@ -337,10 +510,13 @@ export default function Home() {
                         </div>
                     )}
                     
-                    {/* Employee Ring with proper padding */}
-                    <div className="relative p-16 md:p-20">
+                    {/* Employee Ring with responsive padding */}
+                    <div className="relative" style={{ padding: currentLevel.gridSize === 4 ? '80px' : currentLevel.gridSize === 5 ? '64px' : '56px' }}>
                         {/* Top Employees */}
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 flex gap-16">
+                        <div 
+                            className="absolute top-0 left-1/2 -translate-x-1/2 flex"
+                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
+                        >
                             {employees.filter(e => e.position === 'top').map(emp => {
                                 const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
                                 return (
@@ -355,7 +531,10 @@ export default function Home() {
                         </div>
 
                         {/* Right Employees */}
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-16">
+                        <div 
+                            className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col"
+                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
+                        >
                             {employees.filter(e => e.position === 'right').map(emp => {
                                 const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
                                 return (
@@ -370,7 +549,10 @@ export default function Home() {
                         </div>
 
                         {/* Bottom Employees */}
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-16">
+                        <div 
+                            className="absolute bottom-0 left-1/2 -translate-x-1/2 flex"
+                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
+                        >
                             {employees.filter(e => e.position === 'bottom').map(emp => {
                                 const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
                                 return (
@@ -385,7 +567,10 @@ export default function Home() {
                         </div>
 
                         {/* Left Employees */}
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-16">
+                        <div 
+                            className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col"
+                            style={{ gap: currentLevel.gridSize === 4 ? '64px' : currentLevel.gridSize === 5 ? '48px' : '40px' }}
+                        >
                             {employees.filter(e => e.position === 'left').map(emp => {
                                 const empType = currentLevel.employeeTypes.find(et => et.id === emp.employeeTypeId);
                                 return (
@@ -402,9 +587,10 @@ export default function Home() {
                         {/* Puzzle Grid */}
                         <div className="bg-slate-800/30 backdrop-blur rounded-2xl shadow-2xl p-4">
                             <div 
-                                className="grid gap-2"
+                                className="grid"
                                 style={{ 
-                                    gridTemplateColumns: `repeat(${currentLevel.gridSize}, minmax(0, 1fr))` 
+                                    gridTemplateColumns: `repeat(${currentLevel.gridSize}, minmax(0, 1fr))`,
+                                    gap: currentLevel.gridSize === 4 ? '8px' : currentLevel.gridSize === 5 ? '6px' : '4px'
                                 }}
                             >
                                 {Array.from({ length: currentLevel.gridSize * currentLevel.gridSize }).map((_, idx) => {
@@ -416,8 +602,8 @@ export default function Home() {
 
                                     // Dynamic tile size based on grid size
                                     const tileSize = currentLevel.gridSize === 4 ? 'w-20 h-20 md:w-24 md:h-24' :
-                                                      currentLevel.gridSize === 6 ? 'w-14 h-14 md:w-16 md:h-16' :
-                                                      'w-10 h-10 md:w-12 md:h-12';
+                                                      currentLevel.gridSize === 5 ? 'w-16 h-16 md:w-20 md:h-20' :
+                                                      'w-14 h-14 md:w-16 md:h-16';
 
                                     return (
                                         <div key={idx} className={`relative ${tileSize} rounded-lg ${
@@ -570,11 +756,30 @@ export default function Home() {
                                     </>
                                 ) : (
                                     <>
-                                        <h2 className={`text-4xl font-bold mb-4 ${
+                                        <h2 className={`text-4xl font-bold mb-2 ${
                                             isDarkMode ? 'text-white' : 'text-slate-900'
-                                        }`}>Time&apos;s Up!</h2>
-                                        <p className="text-6xl font-bold text-amber-500 mb-2">{score}</p>
-                                        <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>Coffees Delivered</p>
+                                        }`}>Game Over!</h2>
+                                        {gameOverReason && (
+                                            <p className={`text-xl mb-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{gameOverReason}</p>
+                                        )}
+                                        <div className={`rounded-lg p-6 mb-6 ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200/50'}`}>
+                                            <p className="text-6xl font-bold text-amber-500 mb-2">{score}</p>
+                                            <p className={`mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Deliveries Completed</p>
+                                            <div className="flex justify-center gap-6 text-sm">
+                                                <div>
+                                                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                                        {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, '0')}
+                                                    </p>
+                                                    <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Time Survived</p>
+                                                </div>
+                                                {currentLevel.maxManagers && currentLevel.maxManagers > 0 && (
+                                                    <div>
+                                                        <p className={`text-2xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>{managerCount}</p>
+                                                        <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Managers Spawned</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </>
                                 )}
                                 <button
