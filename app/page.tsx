@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Coffee, Sun, Moon, Play } from 'lucide-react';
+import { Coffee, Sun, Moon, Play, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 // Game card data type
@@ -31,13 +31,13 @@ export default function Home() {
             status: 'available'
         },
         {
-            id: 'game-2',
-            title: 'Coming Soon',
-            description: 'More exciting puzzle games are on the way...',
-            icon: <Play className="w-12 h-12" />,
+            id: 'puzzle-a-day',
+            title: 'A Puzzle A Day',
+            description: 'Drag and place 8 pieces to cover everything except the month and date. New puzzle every day!',
+            icon: <Calendar className="w-12 h-12" />,
             gradient: 'from-purple-500 via-pink-500 to-red-500',
-            href: '#',
-            status: 'coming-soon'
+            href: '/games/puzzle-a-day',
+            status: 'available'
         },
         {
             id: 'game-3',
@@ -53,8 +53,8 @@ export default function Home() {
     return (
         <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors ${
             isDarkMode 
-                ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
-                : 'bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100'
+                ? 'bg-linear-to-br from-slate-900 via-slate-800 to-slate-900' 
+                : 'bg-linear-to-br from-slate-100 via-slate-50 to-slate-100'
         }`}>
             <div className="max-w-7xl w-full relative">
                 {/* Theme Toggle - Top Right */}
@@ -80,7 +80,7 @@ export default function Home() {
                     <h1 className={`text-6xl md:text-7xl font-bold mb-4 ${
                         isDarkMode ? 'text-white' : 'text-slate-900'
                     }`}>
-                        Game Hub
+                        The Daily Grind
                     </h1>
                     <p className={`text-xl md:text-2xl ${
                         isDarkMode ? 'text-slate-400' : 'text-slate-600'
@@ -110,7 +110,7 @@ export default function Home() {
                                         }`}
                                     >
                                         {/* Gradient Background */}
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${game.gradient} opacity-20`} />
+                                        <div className={`absolute inset-0 bg-linear-to-br ${game.gradient} opacity-20`} />
                                         
                                         {/* Content */}
                                         <div className="relative h-full p-8 flex flex-col justify-between">
@@ -158,7 +158,7 @@ export default function Home() {
                                     }`}
                                 >
                                     {/* Gradient Background */}
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${game.gradient} opacity-10`} />
+                                    <div className={`absolute inset-0 bg-linear-to-br ${game.gradient} opacity-10`} />
                                     
                                     {/* Content */}
                                     <div className="relative h-full p-8 flex flex-col justify-between">

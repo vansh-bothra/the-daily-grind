@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Info, X, Sun, Moon } from 'lucide-react';
+import { Coffee, Info, X, Sun, Moon, Home } from 'lucide-react';
+import Link from 'next/link';
 
 // Types
 import { Position, EmployeePosition, Tile, Employee, LevelConfig, TileTypeConfig, EmployeeTypeConfig } from '@/types/game.types';
@@ -33,7 +34,7 @@ import { CEOAvatar } from '@/components/CEOAvatar';
 // MAIN GAME COMPONENT
 // ============================================================================
 
-export default function Home() {
+export default function CoffeeRunGame() {
     // Level management - start with Level 1
     const [currentLevel, setCurrentLevel] = useState<LevelConfig>(LEVELS[0]);
     const [levelIndex, setLevelIndex] = useState(0);
@@ -404,35 +405,53 @@ export default function Home() {
     return (
         <div className={`min-h-screen flex items-center justify-center p-4 transition-colors ${
             isDarkMode 
-                ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
-                : 'bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100'
+                ? 'bg-linear-to-br from-slate-900 via-slate-800 to-slate-900' 
+                : 'bg-linear-to-br from-slate-100 via-slate-50 to-slate-100'
         }`}>
             <div className="max-w-4xl w-full relative">
-                {/* Theme Toggle - Top Left */}
-                <button
-                    onClick={() => setIsDarkMode(!isDarkMode)}
-                    className={`absolute top-0 left-0 p-2 rounded-full transition-colors z-10 ${
-                        isDarkMode
-                            ? 'bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white'
-                            : 'bg-slate-200/50 hover:bg-slate-300/50 text-slate-700 hover:text-slate-900'
-                    }`}
-                    aria-label="Toggle Theme"
-                >
-                    {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-                </button>
+                {/* Header Controls */}
+                <div className="absolute top-0 left-0 right-0 flex justify-between items-center z-10 px-0">
+                    {/* Home Icon - Top Left */}
+                    <Link href="/">
+                        <button className={`p-2 rounded-full transition-colors ${
+                            isDarkMode
+                                ? 'bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white'
+                                : 'bg-slate-200/50 hover:bg-slate-300/50 text-slate-700 hover:text-slate-900'
+                        }`}
+                        aria-label="Home">
+                            <Home className="w-6 h-6" />
+                        </button>
+                    </Link>
 
-                {/* Info Icon - Top Right */}
-                <button
-                    onClick={() => setShowInfoModal(true)}
-                    className={`absolute top-0 right-0 p-2 rounded-full transition-colors z-10 ${
-                        isDarkMode
-                            ? 'bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white'
-                            : 'bg-slate-200/50 hover:bg-slate-300/50 text-slate-700 hover:text-slate-900'
-                    }`}
-                    aria-label="How to Play"
-                >
-                    <Info className="w-6 h-6" />
-                </button>
+                    {/* Right side controls */}
+                    <div className="flex gap-3">
+                        {/* Info Icon */}
+                        <button
+                            onClick={() => setShowInfoModal(true)}
+                            className={`p-2 rounded-full transition-colors ${
+                                isDarkMode
+                                    ? 'bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white'
+                                    : 'bg-slate-200/50 hover:bg-slate-300/50 text-slate-700 hover:text-slate-900'
+                            }`}
+                            aria-label="How to Play"
+                        >
+                            <Info className="w-6 h-6" />
+                        </button>
+
+                        {/* Theme Toggle */}
+                        <button
+                            onClick={() => setIsDarkMode(!isDarkMode)}
+                            className={`p-2 rounded-full transition-colors ${
+                                isDarkMode
+                                    ? 'bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white'
+                                    : 'bg-slate-200/50 hover:bg-slate-300/50 text-slate-700 hover:text-slate-900'
+                            }`}
+                            aria-label="Toggle Theme"
+                        >
+                            {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+                        </button>
+                    </div>
+                </div>
 
                 {/* Header */}
                 <div className="text-center mb-8">
