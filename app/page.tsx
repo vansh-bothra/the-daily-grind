@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Coffee, Sun, Moon, Play, Calendar } from 'lucide-react';
+import { Coffee, Sun, Moon, Play, Calendar, Grid3X3 } from 'lucide-react';
 import Link from 'next/link';
 
 // Game card data type
@@ -40,13 +40,13 @@ export default function Home() {
             status: 'available'
         },
         {
-            id: 'game-3',
-            title: 'Coming Soon',
-            description: 'More exciting puzzle games are on the way...',
-            icon: <Play className="w-12 h-12" />,
+            id: 'classic-puzzle',
+            title: '15 Puzzle',
+            description: 'The classic sliding puzzle! Arrange tiles 1-15 in order, or upload your own image to create a custom puzzle.',
+            icon: <Grid3X3 className="w-12 h-12" />,
             gradient: 'from-blue-500 via-cyan-500 to-teal-500',
-            href: '#',
-            status: 'coming-soon'
+            href: '/games/classic-puzzle',
+            status: 'available'
         }
     ];
 

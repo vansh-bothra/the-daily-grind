@@ -89,10 +89,10 @@ export function GameTile({
                 disabled={disabled || (canPour && !isPouring) || tile.tileTypeId === 'manager'}
                 className={`w-full h-full rounded-lg flex flex-col items-center justify-center font-bold text-xl cursor-pointer transition-all relative ${
                     tile.tileTypeId === 'manager'
-                        ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/50 cursor-not-allowed'
+                        ? 'bg-linear-to-br from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/50 cursor-not-allowed'
                         : isSpecialTile && tileType
                         ? tileType.color
-                        : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        : 'bg-linear-to-br from-slate-500 via-slate-600 to-slate-700 shadow-md shadow-slate-800/40 hover:from-slate-400 hover:via-slate-500 hover:to-slate-600'
                     } ${disabled && !canPour && tile.tileTypeId !== 'manager' ? 'opacity-50 cursor-not-allowed' : tile.tileTypeId !== 'manager' ? 'hover:scale-105' : ''}`}
             >
                 {tile.tileTypeId === 'manager' ? (
@@ -114,7 +114,8 @@ export function GameTile({
                         )}
                     </>
                 ) : (
-                    <span className="text-sm md:text-base">{tile.value}</span>
+                    // Regular tiles - no number, just styled gradient
+                    <div className="w-3 h-3 rounded-full bg-slate-400/30" />
                 )}
                 
                 {/* Particle drops animation */}
